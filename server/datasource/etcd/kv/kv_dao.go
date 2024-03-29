@@ -24,14 +24,16 @@ import (
 	"strings"
 
 	"github.com/go-chassis/cari/sync"
+	"github.com/go-chassis/etcdadpt"
 	"github.com/go-chassis/openlog"
-	"github.com/little-cui/etcdadpt"
 
 	"github.com/apache/servicecomb-kie/pkg/model"
 	"github.com/apache/servicecomb-kie/pkg/util"
 	"github.com/apache/servicecomb-kie/server/datasource"
 	"github.com/apache/servicecomb-kie/server/datasource/auth"
 	"github.com/apache/servicecomb-kie/server/datasource/etcd/key"
+
+	eventbase "github.com/apache/servicecomb-service-center/eventbase/datasource/etcd/key"
 )
 
 // Dao operate data in mongodb
@@ -95,7 +97,7 @@ func txnCreate(ctx context.Context, kv *model.KVDoc) (bool, error) {
 		return false, err
 	}
 	kvOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(key.KV(kv.Domain, kv.Project, kv.ID)), etcdadpt.WithValue(kvBytes))
-	taskOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(key.TaskKey(kv.Domain, kv.Project, task.ID, task.Timestamp)), etcdadpt.WithValue(taskBytes))
+	taskOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(eventbase.TaskKey(kv.Domain, kv.Project, task.ID, task.Timestamp)), etcdadpt.WithValue(taskBytes))
 	resp, err := etcdadpt.TxnWithCmp(ctx, []etcdadpt.OpOptions{kvOpPut, taskOpPut},
 		etcdadpt.If(etcdadpt.NotExistKey(string(kvOpPut.Key)), etcdadpt.NotExistKey(string(taskOpPut.Key))), nil)
 	if err != nil {
@@ -165,7 +167,7 @@ func txnUpdate(ctx context.Context, kv *model.KVDoc) error {
 		return err
 	}
 	kvOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(keyKV), etcdadpt.WithValue(kvBytes))
-	taskOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(key.TaskKey(kv.Domain, kv.Project, task.ID, task.Timestamp)), etcdadpt.WithValue(taskBytes))
+	taskOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(eventbase.TaskKey(kv.Domain, kv.Project, task.ID, task.Timestamp)), etcdadpt.WithValue(taskBytes))
 	return etcdadpt.Txn(ctx, []etcdadpt.OpOptions{kvOpPut, taskOpPut})
 }
 
@@ -295,9 +297,9 @@ func txnFindOneAndDelete(ctx context.Context, kvID, project, domain string) (*mo
 		return nil, err
 	}
 	kvOpDel := etcdadpt.OpDel(etcdadpt.WithStrKey(kvKey))
-	taskOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(key.TaskKey(domain, project,
+	taskOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(eventbase.TaskKey(domain, project,
 		task.ID, task.Timestamp)), etcdadpt.WithValue(taskBytes))
-	tombstoneOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(key.TombstoneKey(domain, project, tombstone.ResourceType, tombstone.ResourceID)), etcdadpt.WithValue(tombstoneBytes))
+	tombstoneOpPut := etcdadpt.OpPut(etcdadpt.WithStrKey(eventbase.TombstoneKey(domain, project, tombstone.ResourceType, tombstone.ResourceID)), etcdadpt.WithValue(tombstoneBytes))
 	err = etcdadpt.Txn(ctx, []etcdadpt.OpOptions{kvOpDel, taskOpPut, tombstoneOpPut})
 	if err != nil {
 		openlog.Error("find and delete error", openlog.WithTags(openlog.Tags{
@@ -427,7 +429,7 @@ func txnFindManyAndDelete(ctx context.Context, kvIDs []string, project, domain s
 			openlog.Error("fail to marshal task" + err.Error())
 			return nil, 0, err
 		}
-		opOptions = append(opOptions, etcdadpt.OpPut(etcdadpt.WithStrKey(key.TaskKey(domain, project,
+		opOptions = append(opOptions, etcdadpt.OpPut(etcdadpt.WithStrKey(eventbase.TaskKey(domain, project,
 			task.ID, task.Timestamp)), etcdadpt.WithValue(taskBytes)))
 	}
 	for _, tombstone := range tombstones {
@@ -436,7 +438,7 @@ func txnFindManyAndDelete(ctx context.Context, kvIDs []string, project, domain s
 			openlog.Error("fail to marshal tombstone" + err.Error())
 			return nil, 0, err
 		}
-		opOptions = append(opOptions, etcdadpt.OpPut(etcdadpt.WithStrKey(key.TombstoneKey(domain, project,
+		opOptions = append(opOptions, etcdadpt.OpPut(etcdadpt.WithStrKey(eventbase.TombstoneKey(domain, project,
 			tombstone.ResourceType, tombstone.ResourceID)), etcdadpt.WithValue(tombstoneBytes)))
 	}
 	err := etcdadpt.Txn(ctx, opOptions)

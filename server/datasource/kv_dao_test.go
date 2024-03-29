@@ -23,12 +23,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	_ "github.com/apache/servicecomb-kie/test"
+
 	"github.com/apache/servicecomb-kie/pkg/common"
 	"github.com/apache/servicecomb-kie/pkg/model"
 	"github.com/apache/servicecomb-kie/server/datasource"
 	kvsvc "github.com/apache/servicecomb-kie/server/service/kv"
 	"github.com/apache/servicecomb-kie/server/service/sync"
-	"github.com/apache/servicecomb-kie/test"
 	emodel "github.com/apache/servicecomb-service-center/eventbase/model"
 	"github.com/apache/servicecomb-service-center/eventbase/service/task"
 	"github.com/apache/servicecomb-service-center/eventbase/service/tombstone"
@@ -109,10 +110,6 @@ func TestList(t *testing.T) {
 }
 
 func TestWithSync(t *testing.T) {
-	if test.IsEmbeddedetcdMode() {
-		return
-	}
-
 	t.Run("create kv with sync enabled", func(t *testing.T) {
 		t.Run("creating a kv will create a task should pass", func(t *testing.T) {
 			// set the sync enabled
