@@ -129,7 +129,3 @@ func randomListenAddress() string {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	return addr
 }
-
-func IsEmbeddedetcdMode() bool {
-	return kind == "embedded_etcd" || kind == "embedded_etcd_with_localstorage"
-}
